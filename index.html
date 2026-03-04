@@ -12,7 +12,7 @@
             --danger-color: #dc3545;
         }
         
-        /* 1. 自訂背景區塊 */
+        /* 自訂背景區塊 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             margin: 0;
@@ -20,9 +20,8 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
-            /* 若您有將背景圖上傳至 GitHub，請將 url 替換為您的圖片網址，例如 url('bg.jpg') */
             background-image: url(''); 
-            background-color: #f8f9fa; /* 若無圖片時的預設底色 */
+            background-color: #f8f9fa;
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -42,7 +41,7 @@
         .header-section h2 { margin: 0; color: var(--primary-color); font-size: 28px; }
         .header-section p { margin: 10px 0 0 0; color: #E36C0A; font-weight: bold; font-size: 18px; }
 
-        /* 2. 大大的掃描啟動按鈕 */
+        /* 大大的掃描啟動按鈕 */
         #start-btn {
             background-color: #E3000F; /* 舞光紅 */
             color: white;
@@ -62,7 +61,7 @@
         }
         #start-btn:active { transform: scale(0.95); }
         
-        /* 掃描區塊容器 (預設隱藏) */
+        /* 掃描區塊容器 */
         #scanner-container {
             display: none;
             width: 90%;
@@ -73,19 +72,84 @@
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             text-align: center;
+            box-sizing: border-box;
         }
         #reader { width: 100%; border-radius: 10px; overflow: hidden; }
         
-        /* 報到人數輸入框 */
-        .input-group { margin: 15px 0; font-size: 20px; font-weight: bold; }
-        .input-group input { width: 80px; padding: 10px; font-size: 24px; text-align: center; border-radius: 8px; border: 2px solid #ccc; }
+        /* 優化後的報到人數按鈕 */
+        .input-group { 
+            margin: 10px 0 20px 0; 
+            font-size: 20px; 
+            font-weight: bold; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        #guestCountDisplay {
+            width: 80px;
+            padding: 10px;
+            font-size: 28px;
+            text-align: center;
+            border-radius: 12px;
+            border: 2px solid var(--primary-color);
+            background-color: #f0f8ff;
+            color: var(--primary-color);
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        #guestCountDisplay:active { background-color: var(--primary-color); color: white; }
 
-        /* 3. 超大字體提示窗 (Modal) */
+        /* 數字快選底部面板 (Bottom Sheet) */
+        #number-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9998;
+            align-items: flex-end; /* 讓內容靠底 */
+            justify-content: center;
+        }
+        .number-panel {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            padding: 25px 20px 40px 20px;
+            border-radius: 25px 25px 0 0;
+            box-sizing: border-box;
+            text-align: center;
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .number-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .num-btn {
+            background-color: #f4f4f4;
+            color: #333;
+            font-size: 28px;
+            font-weight: bold;
+            border: none;
+            border-radius: 15px;
+            padding: 20px 0;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .num-btn:active { background-color: var(--primary-color); color: white; transform: scale(0.95); }
+
+        /* 超大字體提示窗 */
         #custom-modal {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             z-index: 9999;
             align-items: center;
             justify-content: center;
@@ -110,6 +174,7 @@
             border: none;
             border-radius: 10px;
             width: 100%;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -126,9 +191,11 @@
 
     <div id="scanner-container">
         <div class="input-group">
-            <label for="guestCount">報到人數：</label>
-            <input type="number" id="guestCount" value="1" min="1" max="99">
+            <label>報到人數：</label>
+            <div id="guestCountDisplay" onclick="openNumberPanel()">1</div>
+            <input type="hidden" id="guestCount" value="1">
         </div>
+        
         <div id="reader"></div>
         <h3 id="status-text" style="color: var(--primary-color);">請對準 QR Code</h3>
     </div>
@@ -141,23 +208,34 @@
         </div>
     </div>
 
+    <div id="number-modal" onclick="closeNumberPanel(event)">
+        <div class="number-panel" onclick="event.stopPropagation()">
+            <h3 style="margin: 0; color: #333; font-size: 24px;">請選擇報到人數</h3>
+            <div class="number-grid">
+                <button class="num-btn" onclick="selectNumber(1)">1</button>
+                <button class="num-btn" onclick="selectNumber(2)">2</button>
+                <button class="num-btn" onclick="selectNumber(3)">3</button>
+                <button class="num-btn" onclick="selectNumber(4)">4</button>
+                <button class="num-btn" onclick="selectNumber(5)">5</button>
+                <button class="num-btn" onclick="selectNumber(6)">6</button>
+                <button class="num-btn" onclick="selectNumber(7)">7</button>
+                <button class="num-btn" onclick="selectNumber(8)">8</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // 您專屬的 GAS Web App URL
         const gasUrl = "https://script.google.com/macros/s/AKfycbztx1G3LDmTK0o_82lFODH6crxXiq4vBNxMgoniFnUA7lO_tK23PJTiUpOJVJIYeyXo/exec";
         
         let html5QrCode;
         let isProcessing = false;
 
-        // 點擊 CLICK HERE 按鈕啟動相機
         document.getElementById('start-btn').addEventListener('click', () => {
-            // 隱藏按鈕，顯示掃描區塊
             document.getElementById('start-btn').style.display = 'none';
             document.getElementById('scanner-container').style.display = 'block';
 
-            // 初始化原生的 Html5Qrcode，以獲得更精確的控制
             html5QrCode = new Html5Qrcode("reader");
 
-            // 強制設定為後置鏡頭 (environment)
             const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
             .catch(err => {
@@ -166,7 +244,6 @@
             });
         });
 
-        // 掃描成功觸發事件
         async function onScanSuccess(decodedText) {
             if (isProcessing) return; 
             isProcessing = true;
@@ -174,11 +251,9 @@
             const guestCount = document.getElementById('guestCount').value;
             document.getElementById('status-text').innerText = "資料傳送中...";
             
-            // 暫停相機畫面，避免重複掃描
             html5QrCode.pause(true);
 
             try {
-                // 發送請求給 GAS
                 await fetch(gasUrl, {
                     method: "POST",
                     mode: "no-cors",
@@ -186,9 +261,8 @@
                     body: JSON.stringify({ customerId: decodedText, count: guestCount })
                 });
 
-                // 顯示大字體成功提示窗
                 showModal("✅", `客戶 ${decodedText}<br><span style="color:#28a745">報到成功！</span><br>共 ${guestCount} 人`);
-                if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // 成功震動
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
 
             } catch (error) {
                 showModal("❌", `傳送失敗<br><span style="color:#dc3545">請檢查網路連線</span>`);
@@ -196,24 +270,42 @@
             }
         }
 
-        // 顯示提示窗函數
+        /* --- 提示窗相關邏輯 --- */
         function showModal(icon, messageHtml) {
             document.getElementById('modal-icon').innerText = icon;
             document.getElementById('modal-message').innerHTML = messageHtml;
             document.getElementById('custom-modal').style.display = 'flex';
         }
 
-        // 關閉提示窗並恢復掃描函數
         function closeModal() {
             document.getElementById('custom-modal').style.display = 'none';
             document.getElementById('status-text').innerText = "請對準下一個 QR Code";
-            document.getElementById('guestCount').value = 1; // 預設人數回歸1人
-            isProcessing = false;
             
-            // 恢復相機掃描
+            // 每次成功報到後，將人數自動重置回 1 人
+            document.getElementById('guestCountDisplay').innerText = "1";
+            document.getElementById('guestCount').value = "1"; 
+            
+            isProcessing = false;
             if (html5QrCode.getState() === Html5QrcodeScannerState.PAUSED) {
                 html5QrCode.resume();
             }
+        }
+
+        /* --- 數字快選面板邏輯 --- */
+        function openNumberPanel() {
+            document.getElementById('number-modal').style.display = 'flex';
+        }
+
+        // 點擊面板外部的半透明黑底時，也會自動關閉
+        function closeNumberPanel(event) {
+            document.getElementById('number-modal').style.display = 'none';
+        }
+
+        // 點擊數字按鈕後，更新畫面與隱藏欄位的值，並收起面板
+        function selectNumber(num) {
+            document.getElementById('guestCountDisplay').innerText = num;
+            document.getElementById('guestCount').value = num;
+            document.getElementById('number-modal').style.display = 'none';
         }
     </script>
 </body>
