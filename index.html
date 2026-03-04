@@ -2,60 +2,177 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>舞光新品發表 - 數位簽到</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026 舞光新品發表會 - 數位簽到</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
-        #reader { width: 100%; max-width: 500px; margin: auto; background: white; padding: 10px; border-radius: 8px; }
-        .input-group { margin: 20px 0; }
-        input { padding: 10px; font-size: 18px; width: 80px; text-align: center; }
-        button { padding: 12px 24px; font-size: 18px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        :root {
+            --primary-color: #005CAF; /* 舞光品牌色參考 */
+            --success-color: #28a745;
+            --bg-color: #f8f9fa;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            width: 100%;
+            padding: 20px 0;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .container {
+            width: 90%;
+            max-width: 500px;
+            margin-top: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        #reader {
+            width: 100%;
+            border: none !important;
+        }
+        /* 隱藏庫內建的選擇檔案按鈕，維持介面簡潔 */
+        #reader__dashboard_section_fs { display: none; }
+        
+        .control-panel {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .input-group input {
+            width: 80%;
+            padding: 12px;
+            font-size: 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+            outline: none;
+        }
+        .input-group input:focus {
+            border-color: var(--primary-color);
+        }
+        #status {
+            margin-top: 15px;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .loading { color: #666; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        
+        /* 響應式調整 */
+        @media (max-width: 400px) {
+            h2 { font-size: 1.2rem; }
+        }
     </style>
 </head>
 <body>
-    <h2>舞光新品發表數位簽到</h2>
-    
-    <div id="reader"></div>
-    
-    <div class="input-group">
-        <label>報到人數：</label>
-        <input type="number" id="guestCount" value="1" min="1">
+
+    <div class="header">
+        <h2>2026 舞光新品發表會</h2>
+        <div>數位簽到系統</div>
     </div>
 
-    <div id="resultStatus">準備掃描...</div>
+    <div class="container">
+        <div class="input-group">
+            <label for="guestCount">報到人數</label>
+            <input type="number" id="guestCount" value="1" min="1" max="99">
+        </div>
+
+        <div id="reader"></div>
+
+        <div class="control-panel">
+            <div id="status">準備就緒，請對準 QR Code</div>
+        </div>
+    </div>
 
     <script>
-        const gasUrl = "您的GAS部署網址"; // <--- 這裡貼上剛才複製的網址
+        // 設定您的 GAS Web App URL
+        const gasUrl = "https://script.google.com/macros/s/AKfycbztx1G3LDmTK0o_82lFODH6crxXiq4vBNxMgoniFnUA7lO_tK23PJTiUpOJVJIYeyXo/exec";
+        
+        let isProcessing = false;
 
-        function onScanSuccess(decodedText, decodedResult) {
-            // 避免重複掃描
-            html5QrcodeScanner.clear();
-            const count = document.getElementById('guestCount').value;
-            submitData(decodedText, count);
-        }
-
-        async function submitData(customerId, count) {
-            document.getElementById('resultStatus').innerText = "傳送中...";
+        // 成功掃描後的處理
+        async function onScanSuccess(decodedText, decodedResult) {
+            if (isProcessing) return; // 防止重複發送
             
+            isProcessing = true;
+            const statusDiv = document.getElementById('status');
+            const guestCount = document.getElementById('guestCount').value;
+
+            statusDiv.innerHTML = `<span class="loading">偵測到編號：${decodedText}，傳送中...</span>`;
+            
+            // 暫停掃描器
+            html5QrcodeScanner.pause(true);
+
             try {
+                // 使用 Fetch API 發送資料
                 const response = await fetch(gasUrl, {
                     method: "POST",
-                    body: JSON.stringify({ customerId: customerId, count: count })
+                    mode: "no-cors", // 由於 GAS 的重導向特性，no-cors 是最穩定的做法
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        customerId: decodedText,
+                        count: guestCount
+                    })
                 });
-                const result = await response.json();
+
+                // 顯示成功視覺回饋
+                statusDiv.style.color = "var(--success-color)";
+                statusDiv.innerText = `✅ 客戶 ${decodedText} 報到成功！`;
                 
-                if (result.status === "success") {
-                    alert(`客戶 ${customerId} 報到成功！共 ${count} 人`);
-                    location.reload(); // 重新整理網頁進行下一次掃描
-                }
+                // 震動回饋 (若手機支援)
+                if (navigator.vibrate) navigator.vibrate(200);
+
+                // 3秒後恢復掃描狀態
+                setTimeout(() => {
+                    statusDiv.style.color = "#000";
+                    statusDiv.innerText = "請對準下一個 QR Code";
+                    isProcessing = false;
+                    html5QrcodeScanner.resume();
+                }, 3000);
+
             } catch (error) {
-                alert("傳送失敗，請檢查網路連線或 API 設定");
-                console.error(error);
+                console.error("Error:", error);
+                statusDiv.style.color = "red";
+                statusDiv.innerText = "❌ 傳送失敗，請檢查網路連線";
+                
+                setTimeout(() => {
+                    isProcessing = false;
+                    html5QrcodeScanner.resume();
+                }, 3000);
             }
         }
 
-        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        // 初始化掃描器
+        const html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", 
+            { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            },
+            /* verbose= */ false
+        );
+
         html5QrcodeScanner.render(onScanSuccess);
     </script>
 </body>
