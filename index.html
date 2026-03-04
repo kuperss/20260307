@@ -8,11 +8,12 @@
     <style>
         :root {
             --primary-color: #005CAF; /* 舞光藍 */
+            --secondary-color: #FF9800; /* 舞光橙 */
             --success-color: #28a745;
             --danger-color: #dc3545;
         }
         
-        /* 自訂背景區塊 */
+        /* 1. 自訂背景優化，解決被裁切問題 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             margin: 0;
@@ -20,10 +21,11 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            /* 預設圖片檔名為 background.png，請確保上傳同名圖片 */
             background-image: url('bg.png'); 
-            background-color: #f8f9fa;
-            background-size: cover;
-            background-position: center;
+            background-color: #f8f9fa; /* 若無圖片時的預設底色 */
+            background-size: cover; /* 確保鋪滿全螢幕 */
+            background-position: center top; /* 2. 顯示區域選擇：優先顯示頂部設計。可改為 left top, right bottom 等 */
             background-repeat: no-repeat;
         }
 
@@ -39,11 +41,11 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         .header-section h2 { margin: 0; color: var(--primary-color); font-size: 28px; }
-        .header-section p { margin: 10px 0 0 0; color: #E36C0A; font-weight: bold; font-size: 18px; }
+        .header-section p { margin: 10px 0 0 0; color: var(--secondary-color); font-weight: bold; font-size: 18px; }
 
-        /* 大大的掃描啟動按鈕 */
+        /* 4. 大大大掃描啟動按鈕 */
         #start-btn {
-            background-color: #E3000F; /* 舞光紅 */
+            background-color: #E3000F; /* 大紅色按鈕 */
             color: white;
             font-size: 36px;
             font-weight: 900;
@@ -61,22 +63,25 @@
         }
         #start-btn:active { transform: scale(0.95); }
         
-        /* 掃描區塊容器 */
+        /* 3. 霧面玻璃材質掃描框容器 */
         #scanner-container {
             display: none;
             width: 90%;
             max-width: 500px;
             margin-top: 20px;
-            background: white;
+            /* 3. 霧面玻璃樣式代碼 */
+            background-color: rgba(255, 255, 255, 0.6); /* 半透明白底 */
+            backdrop-filter: blur(10px); /* 模糊效果 */
+            -webkit-backdrop-filter: blur(10px); /* Safari 支援 */
             padding: 20px;
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             text-align: center;
             box-sizing: border-box;
         }
-        #reader { width: 100%; border-radius: 10px; overflow: hidden; }
+        #reader { width: 100%; border-radius: 10px; overflow: hidden; background-color: transparent; } /* 相機視窗設為透明 */
         
-        /* 優化後的報到人數按鈕 */
+        /* 報到人數按鈕（藍色框顯示） */
         .input-group { 
             margin: 10px 0 20px 0; 
             font-size: 20px; 
@@ -99,7 +104,6 @@
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        #guestCountDisplay:active { background-color: var(--primary-color); color: white; }
 
         /* 數字快選底部面板 (Bottom Sheet) */
         #number-modal {
@@ -144,7 +148,7 @@
         }
         .num-btn:active { background-color: var(--primary-color); color: white; transform: scale(0.95); }
 
-        /* 超大字體提示窗 */
+        /* 超大字體提示窗 (Modal) */
         #custom-modal {
             display: none;
             position: fixed;
@@ -225,17 +229,20 @@
     </div>
 
     <script>
+        // 用戶提供的 GAS Web App URL
         const gasUrl = "https://script.google.com/macros/s/AKfycbztx1G3LDmTK0o_82lFODH6crxXiq4vBNxMgoniFnUA7lO_tK23PJTiUpOJVJIYeyXo/exec";
         
         let html5QrCode;
         let isProcessing = false;
 
+        // 點擊 CLICK HERE 按鈕啟動相機
         document.getElementById('start-btn').addEventListener('click', () => {
             document.getElementById('start-btn').style.display = 'none';
             document.getElementById('scanner-container').style.display = 'block';
 
             html5QrCode = new Html5Qrcode("reader");
 
+            // 強制設定為後置鏡頭 (environment)
             const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
             .catch(err => {
@@ -244,6 +251,7 @@
             });
         });
 
+        // 掃描成功觸發事件
         async function onScanSuccess(decodedText) {
             if (isProcessing) return; 
             isProcessing = true;
@@ -251,6 +259,7 @@
             const guestCount = document.getElementById('guestCount').value;
             document.getElementById('status-text').innerText = "資料傳送中...";
             
+            // 暫停相機畫面，避免重複掃描
             html5QrCode.pause(true);
 
             try {
@@ -261,6 +270,7 @@
                     body: JSON.stringify({ customerId: decodedText, count: guestCount })
                 });
 
+                // 顯示大字體成功提示窗
                 showModal("✅", `客戶 ${decodedText}<br><span style="color:#28a745">報到成功！</span><br>共 ${guestCount} 人`);
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
 
@@ -270,7 +280,7 @@
             }
         }
 
-        /* --- 提示窗相關邏輯 --- */
+        /* --- 大提示窗相關邏輯 --- */
         function showModal(icon, messageHtml) {
             document.getElementById('modal-icon').innerText = icon;
             document.getElementById('modal-message').innerHTML = messageHtml;
@@ -281,13 +291,13 @@
             document.getElementById('custom-modal').style.display = 'none';
             document.getElementById('status-text').innerText = "請對準下一個 QR Code";
             
-            // 每次成功報到後，將人數自動重置回 1 人
+            // 重置人數回預設 1 人
             document.getElementById('guestCountDisplay').innerText = "1";
             document.getElementById('guestCount').value = "1"; 
             
             isProcessing = false;
             if (html5QrCode.getState() === Html5QrcodeScannerState.PAUSED) {
-                html5QrCode.resume();
+                html5QrCode.resume(); // 用戶舊代碼：使用 resume() 恢復相機
             }
         }
 
@@ -296,12 +306,10 @@
             document.getElementById('number-modal').style.display = 'flex';
         }
 
-        // 點擊面板外部的半透明黑底時，也會自動關閉
         function closeNumberPanel(event) {
             document.getElementById('number-modal').style.display = 'none';
         }
 
-        // 點擊數字按鈕後，更新畫面與隱藏欄位的值，並收起面板
         function selectNumber(num) {
             document.getElementById('guestCountDisplay').innerText = num;
             document.getElementById('guestCount').value = num;
