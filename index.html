@@ -7,173 +7,214 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root {
-            --primary-color: #005CAF; /* 舞光品牌色參考 */
+            --primary-color: #005CAF; /* 舞光藍 */
             --success-color: #28a745;
-            --bg-color: #f8f9fa;
+            --danger-color: #dc3545;
         }
+        
+        /* 1. 自訂背景區塊 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--bg-color);
             margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            /* 若您有將背景圖上傳至 GitHub，請將 url 替換為您的圖片網址，例如 url('bg.jpg') */
+            background-image: url(''); 
+            background-color: #f8f9fa; /* 若無圖片時的預設底色 */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
-        .header {
-            background-color: var(--primary-color);
-            color: white;
-            width: 100%;
-            padding: 20px 0;
+
+        /* 標題與視覺排版 */
+        .header-section {
             text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-top: 40px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
-        .container {
+        .header-section h2 { margin: 0; color: var(--primary-color); font-size: 28px; }
+        .header-section p { margin: 10px 0 0 0; color: #E36C0A; font-weight: bold; font-size: 18px; }
+
+        /* 2. 大大的掃描啟動按鈕 */
+        #start-btn {
+            background-color: #E3000F; /* 舞光紅 */
+            color: white;
+            font-size: 36px;
+            font-weight: 900;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 50px;
+            margin-top: 30px;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(227, 0, 15, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            transition: transform 0.1s;
+        }
+        #start-btn:active { transform: scale(0.95); }
+        
+        /* 掃描區塊容器 (預設隱藏) */
+        #scanner-container {
+            display: none;
             width: 90%;
             max-width: 500px;
             margin-top: 20px;
             background: white;
             padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
         }
-        #reader {
+        #reader { width: 100%; border-radius: 10px; overflow: hidden; }
+        
+        /* 報到人數輸入框 */
+        .input-group { margin: 15px 0; font-size: 20px; font-weight: bold; }
+        .input-group input { width: 80px; padding: 10px; font-size: 24px; text-align: center; border-radius: 8px; border: 2px solid #ccc; }
+
+        /* 3. 超大字體提示窗 (Modal) */
+        #custom-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 40px 20px;
+            border-radius: 20px;
+            width: 85%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        #modal-icon { font-size: 60px; margin-bottom: 10px; }
+        #modal-message { font-size: 32px; font-weight: bold; margin-bottom: 30px; line-height: 1.4; color: #333; }
+        .modal-btn {
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
             width: 100%;
-            border: none !important;
-        }
-        /* 隱藏庫內建的選擇檔案按鈕，維持介面簡潔 */
-        #reader__dashboard_section_fs { display: none; }
-        
-        .control-panel {
-            margin-top: 20px;
-            text-align: center;
-        }
-        .input-group {
-            margin-bottom: 20px;
-        }
-        .input-group label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #333;
-        }
-        .input-group input {
-            width: 80%;
-            padding: 12px;
-            font-size: 20px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            text-align: center;
-            outline: none;
-        }
-        .input-group input:focus {
-            border-color: var(--primary-color);
-        }
-        #status {
-            margin-top: 15px;
-            font-weight: bold;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .loading { color: #666; animation: blink 1s infinite; }
-        @keyframes blink { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-        
-        /* 響應式調整 */
-        @media (max-width: 400px) {
-            h2 { font-size: 1.2rem; }
         }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h2>2026 舞光新品發表會</h2>
-        <div>數位簽到系統</div>
+    <div class="header-section" id="header-section">
+        <h2>舞光 DANCELIGHT</h2>
+        <p>中區經銷夥伴新品發表會</p>
     </div>
 
-    <div class="container">
+    <button id="start-btn">
+        CLICK HERE 👆
+    </button>
+
+    <div id="scanner-container">
         <div class="input-group">
-            <label for="guestCount">報到人數</label>
+            <label for="guestCount">報到人數：</label>
             <input type="number" id="guestCount" value="1" min="1" max="99">
         </div>
-
         <div id="reader"></div>
+        <h3 id="status-text" style="color: var(--primary-color);">請對準 QR Code</h3>
+    </div>
 
-        <div class="control-panel">
-            <div id="status">準備就緒，請對準 QR Code</div>
+    <div id="custom-modal">
+        <div class="modal-content">
+            <div id="modal-icon">✅</div>
+            <div id="modal-message">客戶 S5A0310<br>報到成功！</div>
+            <button class="modal-btn" onclick="closeModal()">繼續掃描</button>
         </div>
     </div>
 
     <script>
-        // 設定您的 GAS Web App URL
+        // 您專屬的 GAS Web App URL
         const gasUrl = "https://script.google.com/macros/s/AKfycbztx1G3LDmTK0o_82lFODH6crxXiq4vBNxMgoniFnUA7lO_tK23PJTiUpOJVJIYeyXo/exec";
         
+        let html5QrCode;
         let isProcessing = false;
 
-        // 成功掃描後的處理
-        async function onScanSuccess(decodedText, decodedResult) {
-            if (isProcessing) return; // 防止重複發送
-            
-            isProcessing = true;
-            const statusDiv = document.getElementById('status');
-            const guestCount = document.getElementById('guestCount').value;
+        // 點擊 CLICK HERE 按鈕啟動相機
+        document.getElementById('start-btn').addEventListener('click', () => {
+            // 隱藏按鈕，顯示掃描區塊
+            document.getElementById('start-btn').style.display = 'none';
+            document.getElementById('scanner-container').style.display = 'block';
 
-            statusDiv.innerHTML = `<span class="loading">偵測到編號：${decodedText}，傳送中...</span>`;
+            // 初始化原生的 Html5Qrcode，以獲得更精確的控制
+            html5QrCode = new Html5Qrcode("reader");
+
+            // 強制設定為後置鏡頭 (environment)
+            const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+            .catch(err => {
+                alert("無法啟動相機，請確認是否已給予權限！");
+                console.error(err);
+            });
+        });
+
+        // 掃描成功觸發事件
+        async function onScanSuccess(decodedText) {
+            if (isProcessing) return; 
+            isProcessing = true;
             
-            // 暫停掃描器
-            html5QrcodeScanner.pause(true);
+            const guestCount = document.getElementById('guestCount').value;
+            document.getElementById('status-text').innerText = "資料傳送中...";
+            
+            // 暫停相機畫面，避免重複掃描
+            html5QrCode.pause(true);
 
             try {
-                // 使用 Fetch API 發送資料
-                const response = await fetch(gasUrl, {
+                // 發送請求給 GAS
+                await fetch(gasUrl, {
                     method: "POST",
-                    mode: "no-cors", // 由於 GAS 的重導向特性，no-cors 是最穩定的做法
+                    mode: "no-cors",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        customerId: decodedText,
-                        count: guestCount
-                    })
+                    body: JSON.stringify({ customerId: decodedText, count: guestCount })
                 });
 
-                // 顯示成功視覺回饋
-                statusDiv.style.color = "var(--success-color)";
-                statusDiv.innerText = `✅ 客戶 ${decodedText} 報到成功！`;
-                
-                // 震動回饋 (若手機支援)
-                if (navigator.vibrate) navigator.vibrate(200);
-
-                // 3秒後恢復掃描狀態
-                setTimeout(() => {
-                    statusDiv.style.color = "#000";
-                    statusDiv.innerText = "請對準下一個 QR Code";
-                    isProcessing = false;
-                    html5QrcodeScanner.resume();
-                }, 3000);
+                // 顯示大字體成功提示窗
+                showModal("✅", `客戶 ${decodedText}<br><span style="color:#28a745">報到成功！</span><br>共 ${guestCount} 人`);
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // 成功震動
 
             } catch (error) {
-                console.error("Error:", error);
-                statusDiv.style.color = "red";
-                statusDiv.innerText = "❌ 傳送失敗，請檢查網路連線";
-                
-                setTimeout(() => {
-                    isProcessing = false;
-                    html5QrcodeScanner.resume();
-                }, 3000);
+                showModal("❌", `傳送失敗<br><span style="color:#dc3545">請檢查網路連線</span>`);
+                console.error(error);
             }
         }
 
-        // 初始化掃描器
-        const html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader", 
-            { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0
-            },
-            /* verbose= */ false
-        );
+        // 顯示提示窗函數
+        function showModal(icon, messageHtml) {
+            document.getElementById('modal-icon').innerText = icon;
+            document.getElementById('modal-message').innerHTML = messageHtml;
+            document.getElementById('custom-modal').style.display = 'flex';
+        }
 
-        html5QrcodeScanner.render(onScanSuccess);
+        // 關閉提示窗並恢復掃描函數
+        function closeModal() {
+            document.getElementById('custom-modal').style.display = 'none';
+            document.getElementById('status-text').innerText = "請對準下一個 QR Code";
+            document.getElementById('guestCount').value = 1; // 預設人數回歸1人
+            isProcessing = false;
+            
+            // 恢復相機掃描
+            if (html5QrCode.getState() === Html5QrcodeScannerState.PAUSED) {
+                html5QrCode.resume();
+            }
+        }
     </script>
 </body>
 </html>
