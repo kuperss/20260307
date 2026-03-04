@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>舞光新品發表 - 數位簽到</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
+        #reader { width: 100%; max-width: 500px; margin: auto; background: white; padding: 10px; border-radius: 8px; }
+        .input-group { margin: 20px 0; }
+        input { padding: 10px; font-size: 18px; width: 80px; text-align: center; }
+        button { padding: 12px 24px; font-size: 18px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>舞光新品發表數位簽到</h2>
+    
+    <div id="reader"></div>
+    
+    <div class="input-group">
+        <label>報到人數：</label>
+        <input type="number" id="guestCount" value="1" min="1">
+    </div>
+
+    <div id="resultStatus">準備掃描...</div>
+
+    <script>
+        const gasUrl = "您的GAS部署網址"; // <--- 這裡貼上剛才複製的網址
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // 避免重複掃描
+            html5QrcodeScanner.clear();
+            const count = document.getElementById('guestCount').value;
+            submitData(decodedText, count);
+        }
+
+        async function submitData(customerId, count) {
+            document.getElementById('resultStatus').innerText = "傳送中...";
+            
+            try {
+                const response = await fetch(gasUrl, {
+                    method: "POST",
+                    body: JSON.stringify({ customerId: customerId, count: count })
+                });
+                const result = await response.json();
+                
+                if (result.status === "success") {
+                    alert(`客戶 ${customerId} 報到成功！共 ${count} 人`);
+                    location.reload(); // 重新整理網頁進行下一次掃描
+                }
+            } catch (error) {
+                alert("傳送失敗，請檢查網路連線或 API 設定");
+                console.error(error);
+            }
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+</body>
+</html>
